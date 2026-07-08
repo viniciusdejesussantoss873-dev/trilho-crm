@@ -360,8 +360,13 @@ const SUPABASE_URL = 'https://otcpcxwmkrgkezbxoxdq.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Wwif8SX_60JC23_bmmRnxQ_4ROL0rmr';
 
 let supabase = null;
-if (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20) {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+try {
+  if (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20 && window.supabase) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+} catch (e) {
+  console.error('Erro ao iniciar o Supabase:', e);
+  supabase = null;
 }
 
 function toDbRow(l){
@@ -373,13 +378,19 @@ function toDbRow(l){
 }
 
 async function loadLeadsFromSupabase(){
-  const { data, error } = await supabase.from('leads').select('*').order('criado_em', { ascending: true });
-  if (error){ console.error(error); showToast('Não consegui carregar do Supabase: ' + error.message); return null; }
-  return data.map(row => ({
-    id: row.id, nome: row.nome, telefone: row.telefone, origem: row.origem,
-    produto: row.produto, valor: Number(row.valor) || 0, stage: row.stage,
-    criadoEm: row.criado_em, notas: row.notas || []
-  }));
+  try {
+    const { data, error } = await supabase.from('leads').select('*').order('criado_em', { ascending: true });
+    if (error){ console.error(error); showToast('Não consegui carregar do Supabase: ' + error.message); return null; }
+    return data.map(row => ({
+      id: row.id, nome: row.nome, telefone: row.telefone, origem: row.origem,
+      produto: row.produto, valor: Number(row.valor) || 0, stage: row.stage,
+      criadoEm: row.criado_em, notas: row.notas || []
+    }));
+  } catch (e) {
+    console.error('Falha de conexão com o Supabase:', e);
+    showToast('Falha de conexão com o Supabase. Usando dados locais.');
+    return null;
+  }
 }
 // ====== FIM DA CONFIGURAÇÃO DO SUPABASE ======
 
