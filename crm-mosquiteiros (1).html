@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trilho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0D1315;
+    --surface: #161F22;
+    --surface-2: #1C2629;
+    --border: #283539;
+    --text: #E8EEEC;
+    --text-muted: #8DA19D;
+    --text-faint: #5C6E6B;
+    --accent: #1FA37E;
+    --accent-soft: rgba(31,163,126,0.14);
+    --accent-strong: #26C297;
+    --warn: #E8A33D;
+    --warn-soft: rgba(232,163,61,0.14);
+    --gold: #D4B25A;
+    --gold-soft: rgba(212,178,90,0.14);
+    --danger: #D9615F;
+    --danger-soft: rgba(217,97,95,0.13);
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+  h1,h2,h3,.display{ font-family: 'Sora', sans-serif; letter-spacing: -0.01em; }
+
+  /* subtle mesh texture, nod to the product */
+  .mesh-bg{
+    background-image:
+      linear-gradient(30deg, transparent 48%, rgba(31,163,126,0.05) 49%, rgba(31,163,126,0.05) 51%, transparent 52%),
+      linear-gradient(-30deg, transparent 48%, rgba(31,163,126,0.05) 49%, rgba(31,163,126,0.05) 51%, transparent 52%);
+    background-size: 22px 22px;
+  }
+
+  header{
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--border);
+    display:flex; align-items:center; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap;
+    position: sticky; top:0; z-index: 20;
+    background: rgba(13,19,21,0.92);
+    backdrop-filter: blur(6px);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--accent-soft);
+    display:flex; align-items:center; justify-content:center;
+    position: relative; overflow:hidden;
+  }
+  .brand-mark svg{ width:22px; height:22px; }
+  .brand-title{ font-size: 17px; font-weight: 700; }
+  .brand-sub{ font-size: 12px; color: var(--text-muted); margin-top:1px; }
+
+  .stats{ display:flex; gap: 10px; flex-wrap: wrap; }
+  .stat{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 16px;
+    min-width: 108px;
+  }
+  .stat-label{ font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-value{ font-family:'Sora',sans-serif; font-size: 19px; font-weight: 700; margin-top: 2px; }
+
+  .toolbar{
+    padding: 16px 28px; display:flex; gap:12px; align-items:center; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  input, select, textarea{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus{ border-color: var(--accent); }
+  .search-input{ width: 240px; }
+  button{
+    font-family: 'Inter', sans-serif; cursor: pointer; border: none; border-radius: 8px;
+    font-size: 13.5px; font-weight: 600; padding: 9px 16px;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+  button:active{ transform: scale(0.97); }
+  .btn-primary{ background: var(--accent); color: #06231A; }
+  .btn-primary:hover{ background: var(--accent-strong); }
+  .btn-ghost{ background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover{ border-color: var(--accent); }
+  .btn-danger{ background: var(--danger-soft); color: var(--danger); }
+
+  main{ padding: 22px 28px 60px; }
+  .board{
+    display:flex; gap: 16px; overflow-x: auto; padding-bottom: 12px;
+  }
+  .column{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    min-width: 270px; max-width: 270px;
+    display:flex; flex-direction: column;
+    max-height: calc(100vh - 210px);
+  }
+  .column-head{
+    padding: 14px 14px 10px;
+    display:flex; align-items:center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .column-title{ font-size: 13px; font-weight: 700; display:flex; align-items:center; gap:8px; }
+  .dot{ width:8px; height:8px; border-radius:50%; }
+  .col-count{
+    font-size: 11.5px; color: var(--text-muted); background: var(--surface-2);
+    padding: 2px 8px; border-radius: 20px;
+  }
+  .col-value{ font-size: 11px; color: var(--text-faint); padding: 0 14px 10px; }
+  .cards{ padding: 10px; overflow-y: auto; flex:1; display:flex; flex-direction:column; gap:9px; min-height: 60px; }
+  .cards.drag-over{ background: var(--accent-soft); border-radius: 8px; }
+
+  .card{
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px;
+    cursor: grab;
+    position: relative;
+    transition: border-color 0.12s ease;
+  }
+  .wa-btn{
+    position: absolute; top: 10px; right: 10px;
+    width: 22px; height: 22px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius: 6px;
+    background: rgba(31,163,126,0.12);
+    color: var(--accent-strong);
+    text-decoration: none;
+    transition: background 0.12s ease;
+  }
+  .wa-btn:hover{ background: rgba(31,163,126,0.28); }
+  .card:hover{ border-color: var(--accent); }
+  .card.dragging{ opacity: 0.4; }
+  .card-name{ font-weight: 700; font-size: 13.5px; margin-bottom: 3px; padding-right: 28px; }
+  .card-product{ font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .card-foot{ display:flex; align-items:center; justify-content: space-between; }
+  .card-value{ font-family:'Sora',sans-serif; font-size: 13px; font-weight: 700; color: var(--accent-strong); }
+  .card-origin{
+    font-size: 10.5px; color: var(--text-muted); background: var(--surface);
+    padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border);
+  }
+  .card-empty{ color: var(--text-faint); font-size: 12px; text-align:center; padding: 20px 4px; }
+
+  /* Modal */
+  .overlay{
+    position: fixed; inset:0; background: rgba(6,10,11,0.7);
+    display:none; align-items:center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%; max-width: 480px;
+    max-height: 88vh; overflow-y: auto;
+    padding: 24px;
+  }
+  .modal h2{ font-size: 18px; margin: 0 0 16px; }
+  .field{ margin-bottom: 13px; }
+  .field label{ display:block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+  .field input, .field select, .field textarea{ width: 100%; }
+  .field-row{ display:flex; gap: 10px; }
+  .field-row .field{ flex:1; }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top: 18px; }
+
+  .lead-detail-head{ display:flex; justify-content: space-between; align-items:flex-start; }
+  .lead-tags{ display:flex; gap:8px; margin: 6px 0 16px; flex-wrap: wrap; }
+  .tag{ font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); }
+  .wa-link{ color: var(--accent-strong); text-decoration: none; font-size: 13px; }
+  .wa-link:hover{ text-decoration: underline; }
+
+  .notes-list{ display:flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; max-height: 180px; overflow-y:auto; }
+  .note{ background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 12.5px; }
+  .note-date{ color: var(--text-faint); font-size: 10.5px; margin-bottom: 3px; }
+  .add-note-row{ display:flex; gap: 8px; }
+  .add-note-row input{ flex:1; }
+
+  .empty-state{
+    text-align:center; padding: 80px 20px; color: var(--text-muted);
+  }
+  .empty-state .display{ font-size: 20px; color: var(--text); margin-bottom: 6px; }
+
+  ::-webkit-scrollbar{ width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 20px; }
+
+  @media (max-width: 640px){
+    header, .toolbar, main{ padding-left: 16px; padding-right: 16px; }
+    .stats{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="mesh-bg">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1FA37E" stroke-width="1.6">
+        <path d="M3 5h18M3 5v14M3 5l6 6M21 5v14M21 5l-6 6M3 19h18M3 19l6-6M21 19l-6-6M9 11h6M9 11v8M15 11v8"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-title">Trilho</div>
+      <div class="brand-sub">Gestão de leads e oportunidades</div>
+    </div>
+  </div>
+  <div class="stats" id="statsBar"></div>
+</header>
+
+<div class="toolbar">
+  <input class="search-input" id="searchInput" placeholder="Buscar por nome ou telefone...">
+  <select id="filterOrigin">
+    <option value="">Todas as origens</option>
+    <option>Instagram</option>
+    <option>WhatsApp</option>
+    <option>Indicação</option>
+    <option>Outro</option>
+  </select>
+  <button class="btn-ghost" id="btnImportCsv" style="margin-left:auto;">Importar CSV</button>
+  <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;">
+  <button class="btn-primary" id="btnNewLead">+ Novo lead</button>
+</div>
+
+<main>
+  <div class="board" id="board"></div>
+</main>
+
+<!-- Modal: confirmação genérica -->
+<div class="overlay" id="overlayConfirm">
+  <div class="modal" style="max-width: 380px;">
+    <h2 id="confirmTitle">Confirmar ação</h2>
+    <p id="confirmMessage" style="font-size:13.5px; color:var(--text-muted); line-height:1.5;"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnConfirmCancel">Cancelar</button>
+      <button class="btn-danger" id="btnConfirmOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de notificação -->
+<div id="toast" style="
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+  padding: 12px 20px; border-radius: 9px; font-size: 13.5px; z-index: 100;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
+  max-width: 90vw; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+"></div>
+
+<!-- Modal: novo lead -->
+<div class="overlay" id="overlayNew">
+  <div class="modal">
+    <h2>Novo lead</h2>
+    <div class="field">
+      <label>Nome</label>
+      <input id="newNome" placeholder="Nome do cliente">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Telefone / WhatsApp</label>
+        <input id="newTelefone" placeholder="79 9XXXX-XXXX">
+      </div>
+      <div class="field">
+        <label>Origem</label>
+        <select id="newOrigem">
+          <option>Instagram</option>
+          <option>WhatsApp</option>
+          <option>Indicação</option>
+          <option>Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Produto de interesse</label>
+        <select id="newProduto">
+          <option>Gigante Fechado</option>
+          <option>Mosquiteiro Rede</option>
+          <option>Casal Padrão</option>
+          <option>Gigante Aberto</option>
+          <option>Filó</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Valor estimado (R$)</label>
+        <input id="newValor" type="number" step="0.01" placeholder="0,00">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="cancelNew">Cancelar</button>
+      <button class="btn-primary" id="saveNew">Adicionar lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: detalhe do lead -->
+<div class="overlay" id="overlayDetail">
+  <div class="modal" id="detailModalBody"></div>
+</div>
+
+<!-- Modal: importar CSV -->
+<div class="overlay" id="overlayImport">
+  <div class="modal" style="max-width:560px;">
+    <h2>Importar contatos</h2>
+    <div id="importIntro">
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+        Exporte seus contatos do celular como CSV (Google Contacts: Contatos → Exportar → CSV do Google).
+        O arquivo precisa ter pelo menos uma coluna com o <strong>nome</strong> e uma com o <strong>telefone</strong> — o Trilho tenta identificar isso automaticamente.
+      </p>
+      <div class="modal-actions" style="justify-content:flex-start;">
+        <button class="btn-primary" id="btnChooseFile">Escolher arquivo CSV</button>
+      </div>
+    </div>
+    <div id="importPreview" style="display:none;">
+      <div class="field">
+        <label>Origem para os contatos importados</label>
+        <select id="importOrigem">
+          <option>Indicação</option>
+          <option>Instagram</option>
+          <option>WhatsApp</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-muted);"><span id="importCount">0</span> contatos encontrados. Pré-visualização:</p>
+      <div class="notes-list" id="importList" style="max-height:220px;"></div>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="btnCancelImport">Cancelar</button>
+        <button class="btn-primary" id="btnConfirmImport">Importar contatos</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STAGES = [
+  { id:'novo', label:'Novo', color:'#8DA19D' },
+  { id:'contato', label:'Contato', color:'#E8A33D' },
+  { id:'negociacao', label:'Negociação', color:'#1FA37E' },
+  { id:'fechado', label:'Fechado', color:'#D4B25A' },
+  { id:'perdido', label:'Perdido', color:'#D9615F' },
+];
+
+const STORAGE_KEY = 'trilho_crm_leads_v1';
+
+function loadStoredLeads(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    }
+  } catch(e){ /* localStorage indisponível neste ambiente (ex: preview do chat) */ }
+  return null;
+}
+
+function saveLeads(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(leads)); }
+  catch(e){ /* silencioso: ambiente sem acesso a localStorage */ }
+}
+
+const seedLeads = [
+  { id: cid(), nome:'Patrícia Souza', telefone:'79987651234', origem:'Instagram', produto:'Gigante Fechado', valor:189.9, stage:'negociacao', criadoEm: daysAgo(2), notas:[{data: daysAgo(1), texto:'Perguntou sobre prazo de entrega para Aracaju.'}] },
+  { id: cid(), nome:'Carlos Menezes', telefone:'79996543210', origem:'WhatsApp', produto:'Mosquiteiro Rede', valor:79.9, stage:'novo', criadoEm: daysAgo(0), notas:[] },
+  { id: cid(), nome:'Juliana Farias', telefone:'75988776655', origem:'Indicação', produto:'Casal Padrão', valor:129.5, stage:'contato', criadoEm: daysAgo(4), notas:[{data: daysAgo(3), texto:'Enviado catálogo pelo WhatsApp.'}] },
+  { id: cid(), nome:'Rodrigo Alves', telefone:'79981234567', origem:'Indicação', produto:'Gigante Aberto', valor:159.0, stage:'fechado', criadoEm: daysAgo(9), notas:[{data: daysAgo(5), texto:'Fechou pedido de 2 unidades.'}] },
+  { id: cid(), nome:'Bianca Torres', telefone:'79992223344', origem:'WhatsApp', produto:'Filó', valor:64.9, stage:'perdido', criadoEm: daysAgo(12), notas:[{data: daysAgo(7), texto:'Achou o frete caro, desistiu.'}] },
+  { id: cid(), nome:'Edson Ribeiro', telefone:'79974455667', origem:'Instagram', produto:'Gigante Fechado', valor:189.9, stage:'novo', criadoEm: daysAgo(1), notas:[] },
+];
+
+let leads = loadStoredLeads() || seedLeads;
+
+function cid(){ return 'l' + Math.random().toString(36).slice(2,10); }
+function daysAgo(n){ const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
+
+let toastTimer = null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 3200);
+}
+
+function showConfirm(message, onConfirm, opts){
+  opts = opts || {};
+  document.getElementById('confirmTitle').textContent = opts.title || 'Confirmar ação';
+  document.getElementById('confirmMessage').textContent = message;
+  const overlay = document.getElementById('overlayConfirm');
+  const okBtn = document.getElementById('btnConfirmOk');
+  const cancelBtn = document.getElementById('btnConfirmCancel');
+  overlay.classList.add('open');
+
+  const cleanup = () => {
+    overlay.classList.remove('open');
+    okBtn.removeEventListener('click', onOk);
+    cancelBtn.removeEventListener('click', onCancel);
+  };
+  const onOk = () => { cleanup(); onConfirm(); };
+  const onCancel = () => { cleanup(); };
+  okBtn.addEventListener('click', onOk);
+  cancelBtn.addEventListener('click', onCancel);
+}
+document.getElementById('overlayConfirm').addEventListener('click', e => {
+  if (e.target.id === 'overlayConfirm') document.getElementById('overlayConfirm').classList.remove('open');
+});
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit'});
+}
+function fmtMoney(v){ return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+function waLink(tel){ return 'https://wa.me/55' + tel.replace(/\D/g,''); }
+
+let searchTerm = '';
+let originFilter = '';
+let draggedId = null;
+
+function filteredLeads(){
+  return leads.filter(l => {
+    const matchesSearch = !searchTerm || l.nome.toLowerCase().includes(searchTerm) || l.telefone.includes(searchTerm);
+    const matchesOrigin = !originFilter || l.origem === originFilter;
+    return matchesSearch && matchesOrigin;
+  });
+}
+
+function renderStats(){
+  const total = leads.length;
+  const abertos = leads.filter(l => !['fechado','perdido'].includes(l.stage)).length;
+  const fechados = leads.filter(l => l.stage === 'fechado').length;
+  const decididos = leads.filter(l => ['fechado','perdido'].includes(l.stage)).length;
+  const taxaConv = decididos ? Math.round((fechados/decididos)*100) : 0;
+  const valorAberto = leads.filter(l => !['fechado','perdido'].includes(l.stage)).reduce((s,l)=>s+Number(l.valor||0),0);
+
+  const bar = document.getElementById('statsBar');
+  bar.innerHTML = `
+    <div class="stat"><div class="stat-label">Total de leads</div><div class="stat-value">${total}</div></div>
+    <div class="stat"><div class="stat-label">Em aberto</div><div class="stat-value">${abertos}</div></div>
+    <div class="stat"><div class="stat-label">Taxa de conversão</div><div class="stat-value">${taxaConv}%</div></div>
+    <div class="stat"><div class="stat-label">Valor em aberto</div><div class="stat-value">${fmtMoney(valorAberto)}</div></div>
+  `;
+}
+
+function renderBoard(){
+  const board = document.getElementById('board');
+  const data = filteredLeads();
+  board.innerHTML = '';
+
+  STAGES.forEach(stage => {
+    const stageLeads = data.filter(l => l.stage === stage.id);
+    const stageValue = stageLeads.reduce((s,l)=>s+Number(l.valor||0),0);
+
+    const col = document.createElement('div');
+    col.className = 'column';
+    col.innerHTML = `
+      <div class="column-head">
+        <div class="column-title"><span class="dot" style="background:${stage.color}"></span>${stage.label}</div>
+        <span class="col-count">${stageLeads.length}</span>
+      </div>
+      <div class="col-value">${fmtMoney(stageValue)}</div>
+      <div class="cards" data-stage="${stage.id}">
+        ${stageLeads.length ? stageLeads.map(cardHtml).join('') : '<div class="card-empty">Nenhum lead aqui</div>'}
+      </div>
+    `;
+    board.appendChild(col);
+  });
+
+  attachDnD();
+  attachCardClicks();
+}
+
+function cardHtml(l){
+  return `
+    <div class="card" draggable="true" data-id="${l.id}">
+      <div class="card-name">${escapeHtml(l.nome)}</div>
+      <div class="card-product">${escapeHtml(l.produto)}</div>
+      <div class="card-foot">
+        <span class="card-value">${fmtMoney(Number(l.valor||0))}</span>
+        <span class="card-origin">${l.origem}</span>
+      </div>
+      <a class="wa-btn" href="${waLink(l.telefone)}" target="_blank" rel="noopener" title="Chamar no WhatsApp" onclick="event.stopPropagation()">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.6 6.32A8.86 8.86 0 0 0 12.04 3.9c-4.9 0-8.87 3.98-8.87 8.87 0 1.56.41 3.08 1.19 4.42L3.06 21.1l4.02-1.26a8.85 8.85 0 0 0 4.95 1.5h.01c4.9 0 8.87-3.98 8.87-8.87 0-2.37-.92-4.6-2.31-6.15Zm-5.56 13.64h-.01a7.36 7.36 0 0 1-3.75-1.03l-.27-.16-2.79.87.87-2.72-.17-.28a7.34 7.34 0 0 1-1.13-3.94c0-4.07 3.31-7.37 7.38-7.37 1.97 0 3.82.77 5.21 2.16a7.32 7.32 0 0 1 2.16 5.22c0 4.07-3.31 7.37-7.38 7.37Zm4.04-5.53c-.22-.11-1.31-.65-1.51-.72-.2-.07-.35-.11-.5.11-.15.22-.57.72-.7.87-.13.15-.26.16-.48.05-.22-.11-.93-.34-1.77-1.09a6.6 6.6 0 0 1-1.22-1.52c-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.07-.11-.5-1.2-.68-1.65-.18-.43-.36-.37-.5-.38h-.43c-.15 0-.39.06-.6.28-.2.22-.79.77-.79 1.87s.81 2.17.92 2.32c.11.15 1.6 2.44 3.87 3.42.54.23.96.37 1.29.48.54.17 1.03.15 1.42.09.43-.06 1.31-.54 1.5-1.05.18-.51.18-.95.13-1.05-.05-.1-.2-.15-.42-.26Z"/></svg>
+      </a>
+    </div>
+  `;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+function attachDnD(){
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      draggedId = card.dataset.id;
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
+  document.querySelectorAll('.cards').forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      const lead = leads.find(l => l.id === draggedId);
+      if (lead){ lead.stage = zone.dataset.stage; }
+      draggedId = null;
+      renderAll();
+    });
+  });
+}
+
+function attachCardClicks(){
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => openDetail(card.dataset.id));
+  });
+}
+
+function openDetail(id){
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  const stageOptions = STAGES.map(s => `<option value="${s.id}" ${s.id===l.stage?'selected':''}>${s.label}</option>`).join('');
+  const notesHtml = l.notas.length
+    ? l.notas.slice().reverse().map(n => `<div class="note"><div class="note-date">${fmtDate(n.data)}</div>${escapeHtml(n.texto)}</div>`).join('')
+    : '<div class="card-empty">Sem anotações ainda</div>';
+
+  document.getElementById('detailModalBody').innerHTML = `
+    <div class="lead-detail-head">
+      <div>
+        <h2 style="margin-bottom:2px;">${escapeHtml(l.nome)}</h2>
+        <a class="wa-link" href="${waLink(l.telefone)}" target="_blank" rel="noopener">Abrir no WhatsApp →</a>
+      </div>
+      <button class="btn-danger" id="btnDelete">Excluir</button>
+    </div>
+    <div class="lead-tags">
+      <span class="tag">${l.origem}</span>
+      <span class="tag">${escapeHtml(l.produto)}</span>
+      <span class="tag">${fmtMoney(Number(l.valor||0))}</span>
+    </div>
+    <div class="field">
+      <label>Etapa atual</label>
+      <select id="detailStage">${stageOptions}</select>
+    </div>
+    <div class="field">
+      <label>Anotações</label>
+      <div class="notes-list">${notesHtml}</div>
+      <div class="add-note-row">
+        <input id="newNoteText" placeholder="Adicionar anotação...">
+        <button class="btn-primary" id="btnAddNote">Salvar</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCloseDetail">Fechar</button>
+    </div>
+  `;
+
+  document.getElementById('overlayDetail').classList.add('open');
+
+  document.getElementById('detailStage').addEventListener('change', e => {
+    l.stage = e.target.value;
+    renderAll();
+  });
+  document.getElementById('btnAddNote').addEventListener('click', () => {
+    const txt = document.getElementById('newNoteText').value.trim();
+    if (!txt) return;
+    l.notas.push({ data: new Date().toISOString(), texto: txt });
+    openDetail(id);
+  });
+  document.getElementById('btnDelete').addEventListener('click', () => {
+    showConfirm('Excluir este lead? Essa ação não pode ser desfeita.', () => {
+      leads = leads.filter(x => x.id !== id);
+      closeDetail();
+      renderAll();
+      showToast('Lead excluído.');
+    }, { title: 'Excluir lead' });
+  });
+  document.getElementById('btnCloseDetail').addEventListener('click', closeDetail);
+}
+
+function closeDetail(){
+  document.getElementById('overlayDetail').classList.remove('open');
+}
+
+function renderAll(){
+  saveLeads();
+  renderStats();
+  renderBoard();
+}
+
+// --- New lead modal ---
+const overlayNew = document.getElementById('overlayNew');
+document.getElementById('btnNewLead').addEventListener('click', () => overlayNew.classList.add('open'));
+document.getElementById('cancelNew').addEventListener('click', () => overlayNew.classList.remove('open'));
+document.getElementById('saveNew').addEventListener('click', () => {
+  const nome = document.getElementById('newNome').value.trim();
+  const telefone = document.getElementById('newTelefone').value.trim();
+  if (!nome || !telefone){ showToast('Preencha ao menos nome e telefone.'); return; }
+  leads.push({
+    id: cid(),
+    nome,
+    telefone,
+    origem: document.getElementById('newOrigem').value,
+    produto: document.getElementById('newProduto').value,
+    valor: parseFloat(document.getElementById('newValor').value) || 0,
+    stage: 'novo',
+    criadoEm: new Date().toISOString(),
+    notas: []
+  });
+  document.getElementById('newNome').value = '';
+  document.getElementById('newTelefone').value = '';
+  document.getElementById('newValor').value = '';
+  overlayNew.classList.remove('open');
+  renderAll();
+});
+
+// --- Filters ---
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderBoard();
+});
+document.getElementById('filterOrigin').addEventListener('change', e => {
+  originFilter = e.target.value;
+  renderBoard();
+});
+
+// close overlays on backdrop click
+[overlayNew, document.getElementById('overlayDetail')].forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+// --- Import CSV ---
+const overlayImport = document.getElementById('overlayImport');
+const csvFileInput = document.getElementById('csvFileInput');
+let importCandidates = [];
+
+document.getElementById('btnImportCsv').addEventListener('click', () => {
+  document.getElementById('importIntro').style.display = 'block';
+  document.getElementById('importPreview').style.display = 'none';
+  overlayImport.classList.add('open');
+});
+document.getElementById('btnChooseFile').addEventListener('click', () => csvFileInput.click());
+document.getElementById('btnCancelImport').addEventListener('click', () => overlayImport.classList.remove('open'));
+overlayImport.addEventListener('click', e => { if (e.target === overlayImport) overlayImport.classList.remove('open'); });
+
+csvFileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      importCandidates = parseContactsCsv(ev.target.result);
+    } catch (err) {
+      showToast('Não consegui ler esse arquivo. Confira se é um CSV válido.');
+      return;
+    }
+    if (!importCandidates.length){
+      showToast('Não encontrei nome e telefone nesse arquivo. Confira as colunas do CSV.');
+      return;
+    }
+    renderImportPreview();
+  };
+  reader.readAsText(file, 'UTF-8');
+  csvFileInput.value = '';
+});
+
+function parseCsvLine(line){
+  const result = [];
+  let cur = '', inQuotes = false;
+  for (let i=0; i<line.length; i++){
+    const ch = line[i];
+    if (ch === '"'){
+      if (inQuotes && line[i+1] === '"'){ cur += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === ',' && !inQuotes){
+      result.push(cur); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result.map(s => s.trim());
+}
+
+function parseContactsCsv(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if (lines.length < 2) return [];
+  const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
+
+  const nameKeywords = ['name', 'nome', 'first name', 'primeiro nome', 'display name'];
+  const phoneKeywords = ['phone', 'telefone', 'celular', 'whatsapp', 'mobile', 'número'];
+
+  let nameIdx = headers.findIndex(h => nameKeywords.some(k => h.includes(k)));
+  let phoneIdx = headers.findIndex(h => phoneKeywords.some(k => h.includes(k)));
+  if (nameIdx === -1) nameIdx = 0;
+  if (phoneIdx === -1) phoneIdx = headers.length > 1 ? 1 : 0;
+
+  const seenPhones = new Set();
+  const contacts = [];
+  for (let i=1; i<lines.length; i++){
+    const cols = parseCsvLine(lines[i]);
+    const nome = (cols[nameIdx] || '').trim();
+    const telefoneRaw = (cols[phoneIdx] || '').trim();
+    const telefone = telefoneRaw.replace(/[^\d+]/g,'');
+    if (!nome || !telefone) continue;
+    const key = telefone.replace(/\D/g,'');
+    if (seenPhones.has(key)) continue;
+    seenPhones.add(key);
+    contacts.push({ nome, telefone });
+  }
+  return contacts;
+}
+
+function renderImportPreview(){
+  document.getElementById('importIntro').style.display = 'none';
+  document.getElementById('importPreview').style.display = 'block';
+  document.getElementById('importCount').textContent = importCandidates.length;
+  document.getElementById('importList').innerHTML = importCandidates.slice(0, 50).map(c => `
+    <div class="note"><strong>${escapeHtml(c.nome)}</strong> · ${escapeHtml(c.telefone)}</div>
+  `).join('') + (importCandidates.length > 50 ? `<div class="card-empty">+ ${importCandidates.length - 50} outros contatos</div>` : '');
+}
+
+document.getElementById('btnConfirmImport').addEventListener('click', () => {
+  const origem = document.getElementById('importOrigem').value;
+  const existingPhones = new Set(leads.map(l => l.telefone.replace(/\D/g,'')));
+  let added = 0;
+  importCandidates.forEach(c => {
+    const key = c.telefone.replace(/\D/g,'');
+    if (existingPhones.has(key)) return;
+    leads.push({
+      id: cid(),
+      nome: c.nome,
+      telefone: c.telefone,
+      origem,
+      produto: 'Outro',
+      valor: 0,
+      stage: 'novo',
+      criadoEm: new Date().toISOString(),
+      notas: []
+    });
+    existingPhones.add(key);
+    added++;
+  });
+  overlayImport.classList.remove('open');
+  renderAll();
+  showToast(`${added} contato(s) importado(s). ${importCandidates.length - added > 0 ? (importCandidates.length - added) + ' já existiam e foram ignorados.' : ''}`);
+});
+
+renderAll();
+</script>
+</body>
+</html>
