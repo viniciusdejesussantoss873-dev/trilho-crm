@@ -359,14 +359,14 @@
 const SUPABASE_URL = 'https://otcpcxwmkrgkezbxoxdq.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Wwif8SX_60JC23_bmmRnxQ_4ROL0rmr';
 
-let supabase = null;
+let sbClient = null;
 try {
   if (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20 && window.supabase) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 } catch (e) {
   console.error('Erro ao iniciar o Supabase:', e);
-  supabase = null;
+  sbClient = null;
 }
 
 function toDbRow(l){
@@ -379,7 +379,7 @@ function toDbRow(l){
 
 async function loadLeadsFromSupabase(){
   try {
-    const { data, error } = await supabase.from('leads').select('*').order('criado_em', { ascending: true });
+    const { data, error } = await sbClient.from('leads').select('*').order('criado_em', { ascending: true });
     if (error){ console.error(error); showToast('Não consegui carregar do Supabase: ' + error.message); return null; }
     return data.map(row => ({
       id: row.id, nome: row.nome, telefone: row.telefone, origem: row.origem,
@@ -425,7 +425,7 @@ const seedLeads = [];
 let leads = [];
 
 async function initLeads(){
-  if (supabase){
+  if (sbClient){
     const remote = await loadLeadsFromSupabase();
     if (remote){
       leads = remote;
@@ -576,8 +576,8 @@ function attachDnD(){
       const lead = leads.find(l => l.id === draggedId);
       if (lead){
         lead.stage = zone.dataset.stage;
-        if (supabase){
-          const { error } = await supabase.from('leads').update({ stage: lead.stage }).eq('id', lead.id);
+        if (sbClient){
+          const { error } = await sbClient.from('leads').update({ stage: lead.stage }).eq('id', lead.id);
           if (error) showToast('Erro ao sincronizar com o Supabase: ' + error.message);
         }
       }
@@ -636,8 +636,8 @@ function openDetail(id){
   document.getElementById('detailStage').addEventListener('change', async e => {
     l.stage = e.target.value;
     renderAll();
-    if (supabase){
-      const { error } = await supabase.from('leads').update({ stage: l.stage }).eq('id', l.id);
+    if (sbClient){
+      const { error } = await sbClient.from('leads').update({ stage: l.stage }).eq('id', l.id);
       if (error) showToast('Erro ao sincronizar com o Supabase: ' + error.message);
     }
   });
@@ -647,8 +647,8 @@ function openDetail(id){
     l.notas.push({ data: new Date().toISOString(), texto: txt });
     saveLeads();
     openDetail(id);
-    if (supabase){
-      const { error } = await supabase.from('leads').update({ notas: l.notas }).eq('id', l.id);
+    if (sbClient){
+      const { error } = await sbClient.from('leads').update({ notas: l.notas }).eq('id', l.id);
       if (error) showToast('Erro ao salvar anotação no Supabase: ' + error.message);
     }
   });
@@ -658,8 +658,8 @@ function openDetail(id){
       closeDetail();
       renderAll();
       showToast('Lead excluído.');
-      if (supabase){
-        const { error } = await supabase.from('leads').delete().eq('id', id);
+      if (sbClient){
+        const { error } = await sbClient.from('leads').delete().eq('id', id);
         if (error) showToast('Erro ao excluir no Supabase: ' + error.message);
       }
     }, { title: 'Excluir lead' });
@@ -702,8 +702,8 @@ document.getElementById('saveNew').addEventListener('click', async () => {
   document.getElementById('newValor').value = '';
   overlayNew.classList.remove('open');
   renderAll();
-  if (supabase){
-    const { error } = await supabase.from('leads').insert(toDbRow(newLead));
+  if (sbClient){
+    const { error } = await sbClient.from('leads').insert(toDbRow(newLead));
     if (error) showToast('Erro ao salvar no Supabase: ' + error.message);
   }
 });
@@ -838,8 +838,8 @@ document.getElementById('btnConfirmImport').addEventListener('click', async () =
   overlayImport.classList.remove('open');
   renderAll();
   showToast(`${newLeads.length} contato(s) importado(s). ${importCandidates.length - newLeads.length > 0 ? (importCandidates.length - newLeads.length) + ' já existiam e foram ignorados.' : ''}`);
-  if (supabase && newLeads.length){
-    const { error } = await supabase.from('leads').insert(newLeads.map(toDbRow));
+  if (sbClient && newLeads.length){
+    const { error } = await sbClient.from('leads').insert(newLeads.map(toDbRow));
     if (error) showToast('Alguns contatos podem não ter sincronizado com o Supabase: ' + error.message);
   }
 });
