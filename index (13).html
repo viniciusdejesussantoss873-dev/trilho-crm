@@ -351,7 +351,37 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ====== CONFIGURAÇÃO DO SUPABASE ======
+// Cole aqui a "Project URL" e a chave "anon public" (Settings → API no painel do Supabase)
+const SUPABASE_URL = 'COLE_SUA_PROJECT_URL_AQUI';
+const SUPABASE_ANON_KEY = 'COLE_SUA_ANON_KEY_AQUI';
+
+let supabase = null;
+if (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20) {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+function toDbRow(l){
+  return {
+    id: l.id, nome: l.nome, telefone: l.telefone, origem: l.origem,
+    produto: l.produto, valor: l.valor, stage: l.stage,
+    criado_em: l.criadoEm, notas: l.notas
+  };
+}
+
+async function loadLeadsFromSupabase(){
+  const { data, error } = await supabase.from('leads').select('*').order('criado_em', { ascending: true });
+  if (error){ console.error(error); showToast('Não consegui carregar do Supabase: ' + error.message); return null; }
+  return data.map(row => ({
+    id: row.id, nome: row.nome, telefone: row.telefone, origem: row.origem,
+    produto: row.produto, valor: Number(row.valor) || 0, stage: row.stage,
+    criadoEm: row.criado_em, notas: row.notas || []
+  }));
+}
+// ====== FIM DA CONFIGURAÇÃO DO SUPABASE ======
+
 const STAGES = [
   { id:'novo', label:'Novo', color:'#8DA19D' },
   { id:'contato', label:'Contato', color:'#E8A33D' },
@@ -387,7 +417,20 @@ const seedLeads = [
   { id: cid(), nome:'Edson Ribeiro', telefone:'79974455667', origem:'Instagram', produto:'Gigante Fechado', valor:189.9, stage:'novo', criadoEm: daysAgo(1), notas:[] },
 ];
 
-let leads = loadStoredLeads() || seedLeads;
+let leads = [];
+
+async function initLeads(){
+  if (supabase){
+    const remote = await loadLeadsFromSupabase();
+    if (remote){
+      leads = remote;
+      renderAll();
+      return;
+    }
+  }
+  leads = loadStoredLeads() || seedLeads;
+  renderAll();
+}
 
 function cid(){ return 'l' + Math.random().toString(36).slice(2,10); }
 function daysAgo(n){ const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
@@ -522,11 +565,17 @@ function attachDnD(){
   document.querySelectorAll('.cards').forEach(zone => {
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-    zone.addEventListener('drop', e => {
+    zone.addEventListener('drop', async e => {
       e.preventDefault();
       zone.classList.remove('drag-over');
       const lead = leads.find(l => l.id === draggedId);
-      if (lead){ lead.stage = zone.dataset.stage; }
+      if (lead){
+        lead.stage = zone.dataset.stage;
+        if (supabase){
+          const { error } = await supabase.from('leads').update({ stage: lead.stage }).eq('id', lead.id);
+          if (error) showToast('Erro ao sincronizar com o Supabase: ' + error.message);
+        }
+      }
       draggedId = null;
       renderAll();
     });
@@ -579,22 +628,35 @@ function openDetail(id){
 
   document.getElementById('overlayDetail').classList.add('open');
 
-  document.getElementById('detailStage').addEventListener('change', e => {
+  document.getElementById('detailStage').addEventListener('change', async e => {
     l.stage = e.target.value;
     renderAll();
+    if (supabase){
+      const { error } = await supabase.from('leads').update({ stage: l.stage }).eq('id', l.id);
+      if (error) showToast('Erro ao sincronizar com o Supabase: ' + error.message);
+    }
   });
-  document.getElementById('btnAddNote').addEventListener('click', () => {
+  document.getElementById('btnAddNote').addEventListener('click', async () => {
     const txt = document.getElementById('newNoteText').value.trim();
     if (!txt) return;
     l.notas.push({ data: new Date().toISOString(), texto: txt });
+    saveLeads();
     openDetail(id);
+    if (supabase){
+      const { error } = await supabase.from('leads').update({ notas: l.notas }).eq('id', l.id);
+      if (error) showToast('Erro ao salvar anotação no Supabase: ' + error.message);
+    }
   });
   document.getElementById('btnDelete').addEventListener('click', () => {
-    showConfirm('Excluir este lead? Essa ação não pode ser desfeita.', () => {
+    showConfirm('Excluir este lead? Essa ação não pode ser desfeita.', async () => {
       leads = leads.filter(x => x.id !== id);
       closeDetail();
       renderAll();
       showToast('Lead excluído.');
+      if (supabase){
+        const { error } = await supabase.from('leads').delete().eq('id', id);
+        if (error) showToast('Erro ao excluir no Supabase: ' + error.message);
+      }
     }, { title: 'Excluir lead' });
   });
   document.getElementById('btnCloseDetail').addEventListener('click', closeDetail);
@@ -614,11 +676,11 @@ function renderAll(){
 const overlayNew = document.getElementById('overlayNew');
 document.getElementById('btnNewLead').addEventListener('click', () => overlayNew.classList.add('open'));
 document.getElementById('cancelNew').addEventListener('click', () => overlayNew.classList.remove('open'));
-document.getElementById('saveNew').addEventListener('click', () => {
+document.getElementById('saveNew').addEventListener('click', async () => {
   const nome = document.getElementById('newNome').value.trim();
   const telefone = document.getElementById('newTelefone').value.trim();
   if (!nome || !telefone){ showToast('Preencha ao menos nome e telefone.'); return; }
-  leads.push({
+  const newLead = {
     id: cid(),
     nome,
     telefone,
@@ -628,12 +690,17 @@ document.getElementById('saveNew').addEventListener('click', () => {
     stage: 'novo',
     criadoEm: new Date().toISOString(),
     notas: []
-  });
+  };
+  leads.push(newLead);
   document.getElementById('newNome').value = '';
   document.getElementById('newTelefone').value = '';
   document.getElementById('newValor').value = '';
   overlayNew.classList.remove('open');
   renderAll();
+  if (supabase){
+    const { error } = await supabase.from('leads').insert(toDbRow(newLead));
+    if (error) showToast('Erro ao salvar no Supabase: ' + error.message);
+  }
 });
 
 // --- Filters ---
@@ -742,14 +809,14 @@ function renderImportPreview(){
   `).join('') + (importCandidates.length > 50 ? `<div class="card-empty">+ ${importCandidates.length - 50} outros contatos</div>` : '');
 }
 
-document.getElementById('btnConfirmImport').addEventListener('click', () => {
+document.getElementById('btnConfirmImport').addEventListener('click', async () => {
   const origem = document.getElementById('importOrigem').value;
   const existingPhones = new Set(leads.map(l => l.telefone.replace(/\D/g,'')));
-  let added = 0;
+  const newLeads = [];
   importCandidates.forEach(c => {
     const key = c.telefone.replace(/\D/g,'');
     if (existingPhones.has(key)) return;
-    leads.push({
+    newLeads.push({
       id: cid(),
       nome: c.nome,
       telefone: c.telefone,
@@ -761,14 +828,18 @@ document.getElementById('btnConfirmImport').addEventListener('click', () => {
       notas: []
     });
     existingPhones.add(key);
-    added++;
   });
+  leads.push(...newLeads);
   overlayImport.classList.remove('open');
   renderAll();
-  showToast(`${added} contato(s) importado(s). ${importCandidates.length - added > 0 ? (importCandidates.length - added) + ' já existiam e foram ignorados.' : ''}`);
+  showToast(`${newLeads.length} contato(s) importado(s). ${importCandidates.length - newLeads.length > 0 ? (importCandidates.length - newLeads.length) + ' já existiam e foram ignorados.' : ''}`);
+  if (supabase && newLeads.length){
+    const { error } = await supabase.from('leads').insert(newLeads.map(toDbRow));
+    if (error) showToast('Alguns contatos podem não ter sincronizado com o Supabase: ' + error.message);
+  }
 });
 
-renderAll();
+initLeads();
 </script>
 </body>
 </html>
