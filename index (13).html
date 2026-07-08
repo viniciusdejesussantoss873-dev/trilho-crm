@@ -390,7 +390,7 @@ const STAGES = [
   { id:'perdido', label:'Perdido', color:'#D9615F' },
 ];
 
-const STORAGE_KEY = 'trilho_crm_leads_v1';
+const STORAGE_KEY = 'trilho_crm_leads_v2';
 
 function loadStoredLeads(){
   try {
@@ -408,14 +408,7 @@ function saveLeads(){
   catch(e){ /* silencioso: ambiente sem acesso a localStorage */ }
 }
 
-const seedLeads = [
-  { id: cid(), nome:'Patrícia Souza', telefone:'79987651234', origem:'Instagram', produto:'Gigante Fechado', valor:189.9, stage:'negociacao', criadoEm: daysAgo(2), notas:[{data: daysAgo(1), texto:'Perguntou sobre prazo de entrega para Aracaju.'}] },
-  { id: cid(), nome:'Carlos Menezes', telefone:'79996543210', origem:'WhatsApp', produto:'Mosquiteiro Rede', valor:79.9, stage:'novo', criadoEm: daysAgo(0), notas:[] },
-  { id: cid(), nome:'Juliana Farias', telefone:'75988776655', origem:'Indicação', produto:'Casal Padrão', valor:129.5, stage:'contato', criadoEm: daysAgo(4), notas:[{data: daysAgo(3), texto:'Enviado catálogo pelo WhatsApp.'}] },
-  { id: cid(), nome:'Rodrigo Alves', telefone:'79981234567', origem:'Indicação', produto:'Gigante Aberto', valor:159.0, stage:'fechado', criadoEm: daysAgo(9), notas:[{data: daysAgo(5), texto:'Fechou pedido de 2 unidades.'}] },
-  { id: cid(), nome:'Bianca Torres', telefone:'79992223344', origem:'WhatsApp', produto:'Filó', valor:64.9, stage:'perdido', criadoEm: daysAgo(12), notas:[{data: daysAgo(7), texto:'Achou o frete caro, desistiu.'}] },
-  { id: cid(), nome:'Edson Ribeiro', telefone:'79974455667', origem:'Instagram', produto:'Gigante Fechado', valor:189.9, stage:'novo', criadoEm: daysAgo(1), notas:[] },
-];
+const seedLeads = [];
 
 let leads = [];
 
