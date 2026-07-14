@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -239,6 +238,7 @@
   </select>
   <button class="btn-ghost" id="btnImportCsv" style="margin-left:auto;">Importar CSV</button>
   <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;">
+  <button class="btn-ghost" id="btnBulkMsg">Mensagem em massa</button>
   <button class="btn-primary" id="btnNewLead">+ Novo lead</button>
 </div>
 
@@ -348,6 +348,34 @@
         <button class="btn-ghost" id="btnCancelImport">Cancelar</button>
         <button class="btn-primary" id="btnConfirmImport">Importar contatos</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: mensagem em massa -->
+<div class="overlay" id="overlayBulkMsg">
+  <div class="modal" style="max-width:560px;">
+    <h2>Mensagem em massa</h2>
+    <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin-top:-8px;">
+      Isso abre o WhatsApp já com a mensagem escrita pra cada contato selecionado — você só confere e clica em enviar, um por um. Use <strong>{nome}</strong>, <strong>{produto}</strong> e <strong>{valor}</strong> pra personalizar automaticamente.
+    </p>
+    <div class="field">
+      <label>Mensagem</label>
+      <textarea id="bulkMsgTemplate" rows="3" style="width:100%; resize:vertical;"></textarea>
+    </div>
+    <div class="field">
+      <label>Filtrar por etapa</label>
+      <select id="bulkMsgStageFilter">
+        <option value="">Todas as etapas</option>
+      </select>
+    </div>
+    <p style="font-size:12.5px; color:var(--text-muted);">
+      <span id="bulkMsgCount">0</span> contato(s) selecionado(s)
+    </p>
+    <div class="notes-list" id="bulkMsgList" style="max-height:220px;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btnCancelBulkMsg">Cancelar</button>
+      <button class="btn-primary" id="btnStartBulkMsg">Abrir conversas selecionadas</button>
     </div>
   </div>
 </div>
@@ -480,7 +508,24 @@ function fmtDate(iso){
   return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit'});
 }
 function fmtMoney(v){ return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
-function waLink(tel){ return 'https://wa.me/55' + tel.replace(/\D/g,''); }
+function waLink(tel, text){
+  const base = 'https://wa.me/55' + tel.replace(/\D/g,'');
+  return text ? base + '?text=' + encodeURIComponent(text) : base;
+}
+function applyTemplate(tpl, lead){
+  return tpl
+    .replace(/\{nome\}/gi, (lead.nome || '').split(' ')[0])
+    .replace(/\{produto\}/gi, lead.produto || '')
+    .replace(/\{valor\}/gi, fmtMoney(Number(lead.valor||0)));
+}
+const DEFAULT_MSG_TEMPLATE = 'Oi {nome}! Aqui é da Multi Confecções 😊 Vi seu interesse no {produto} e queria saber se posso te ajudar com alguma dúvida.';
+function getMsgTemplate(){
+  try { return localStorage.getItem('trilho_msg_template') || DEFAULT_MSG_TEMPLATE; }
+  catch(e){ return DEFAULT_MSG_TEMPLATE; }
+}
+function setMsgTemplate(tpl){
+  try { localStorage.setItem('trilho_msg_template', tpl); } catch(e){}
+}
 
 let searchTerm = '';
 let originFilter = '';
@@ -548,7 +593,7 @@ function cardHtml(l){
         <span class="card-value">${fmtMoney(Number(l.valor||0))}</span>
         <span class="card-origin">${l.origem}</span>
       </div>
-      <a class="wa-btn" href="${waLink(l.telefone)}" target="_blank" rel="noopener" title="Chamar no WhatsApp" onclick="event.stopPropagation()">
+      <a class="wa-btn" href="${waLink(l.telefone, applyTemplate(getMsgTemplate(), l))}" target="_blank" rel="noopener" title="Chamar no WhatsApp com mensagem pronta" onclick="event.stopPropagation()">
         <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.6 6.32A8.86 8.86 0 0 0 12.04 3.9c-4.9 0-8.87 3.98-8.87 8.87 0 1.56.41 3.08 1.19 4.42L3.06 21.1l4.02-1.26a8.85 8.85 0 0 0 4.95 1.5h.01c4.9 0 8.87-3.98 8.87-8.87 0-2.37-.92-4.6-2.31-6.15Zm-5.56 13.64h-.01a7.36 7.36 0 0 1-3.75-1.03l-.27-.16-2.79.87.87-2.72-.17-.28a7.34 7.34 0 0 1-1.13-3.94c0-4.07 3.31-7.37 7.38-7.37 1.97 0 3.82.77 5.21 2.16a7.32 7.32 0 0 1 2.16 5.22c0 4.07-3.31 7.37-7.38 7.37Zm4.04-5.53c-.22-.11-1.31-.65-1.51-.72-.2-.07-.35-.11-.5.11-.15.22-.57.72-.7.87-.13.15-.26.16-.48.05-.22-.11-.93-.34-1.77-1.09a6.6 6.6 0 0 1-1.22-1.52c-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.07-.11-.5-1.2-.68-1.65-.18-.43-.36-.37-.5-.38h-.43c-.15 0-.39.06-.6.28-.2.22-.79.77-.79 1.87s.81 2.17.92 2.32c.11.15 1.6 2.44 3.87 3.42.54.23.96.37 1.29.48.54.17 1.03.15 1.42.09.43-.06 1.31-.54 1.5-1.05.18-.51.18-.95.13-1.05-.05-.1-.2-.15-.42-.26Z"/></svg>
       </a>
     </div>
@@ -605,7 +650,7 @@ function openDetail(id){
     <div class="lead-detail-head">
       <div>
         <h2 style="margin-bottom:2px;">${escapeHtml(l.nome)}</h2>
-        <a class="wa-link" href="${waLink(l.telefone)}" target="_blank" rel="noopener">Abrir no WhatsApp →</a>
+        <a class="wa-link" href="${waLink(l.telefone, applyTemplate(getMsgTemplate(), l))}" target="_blank" rel="noopener">Abrir no WhatsApp com mensagem pronta →</a>
       </div>
       <button class="btn-danger" id="btnDelete">Excluir</button>
     </div>
@@ -842,6 +887,56 @@ document.getElementById('btnConfirmImport').addEventListener('click', async () =
     const { error } = await sbClient.from('leads').insert(newLeads.map(toDbRow));
     if (error) showToast('Alguns contatos podem não ter sincronizado com o Supabase: ' + error.message);
   }
+});
+
+// --- Mensagem em massa ---
+const overlayBulkMsg = document.getElementById('overlayBulkMsg');
+const bulkMsgStageFilter = document.getElementById('bulkMsgStageFilter');
+STAGES.forEach(s => {
+  const opt = document.createElement('option');
+  opt.value = s.id; opt.textContent = s.label;
+  bulkMsgStageFilter.appendChild(opt);
+});
+
+document.getElementById('btnBulkMsg').addEventListener('click', () => {
+  document.getElementById('bulkMsgTemplate').value = getMsgTemplate();
+  renderBulkMsgList();
+  overlayBulkMsg.classList.add('open');
+});
+document.getElementById('btnCancelBulkMsg').addEventListener('click', () => overlayBulkMsg.classList.remove('open'));
+overlayBulkMsg.addEventListener('click', e => { if (e.target === overlayBulkMsg) overlayBulkMsg.classList.remove('open'); });
+bulkMsgStageFilter.addEventListener('change', renderBulkMsgList);
+document.getElementById('bulkMsgTemplate').addEventListener('input', renderBulkMsgList);
+
+function renderBulkMsgList(){
+  const stageFilter = bulkMsgStageFilter.value;
+  const matching = leads.filter(l => !stageFilter || l.stage === stageFilter);
+  document.getElementById('bulkMsgCount').textContent = matching.length;
+  document.getElementById('bulkMsgList').innerHTML = matching.length
+    ? matching.map(l => `
+        <div class="note" style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" class="bulkMsgCheck" data-id="${l.id}" checked style="width:auto;">
+          <div><strong>${escapeHtml(l.nome)}</strong> · ${escapeHtml(l.telefone)}</div>
+        </div>
+      `).join('')
+    : '<div class="card-empty">Nenhum contato nessa etapa</div>';
+}
+
+document.getElementById('btnStartBulkMsg').addEventListener('click', () => {
+  const tpl = document.getElementById('bulkMsgTemplate').value.trim();
+  if (!tpl){ showToast('Escreva uma mensagem antes de continuar.'); return; }
+  setMsgTemplate(tpl);
+  const checked = Array.from(document.querySelectorAll('.bulkMsgCheck:checked')).map(c => c.dataset.id);
+  const selectedLeads = leads.filter(l => checked.includes(l.id));
+  if (!selectedLeads.length){ showToast('Selecione ao menos um contato.'); return; }
+
+  showToast(`Abrindo ${selectedLeads.length} conversa(s)... permita pop-ups se o navegador bloquear.`);
+  selectedLeads.forEach((l, i) => {
+    setTimeout(() => {
+      window.open(waLink(l.telefone, applyTemplate(tpl, l)), '_blank');
+    }, i * 500);
+  });
+  overlayBulkMsg.classList.remove('open');
 });
 
 initLeads();
