@@ -239,6 +239,7 @@
   <button class="btn-ghost" id="btnImportCsv" style="margin-left:auto;">Importar CSV</button>
   <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;">
   <button class="btn-ghost" id="btnBulkMsg">Mensagem em massa</button>
+  <button class="btn-ghost" id="btnExportVcf">Salvar contatos no celular</button>
   <button class="btn-primary" id="btnNewLead">+ Novo lead</button>
 </div>
 
@@ -937,6 +938,38 @@ document.getElementById('btnStartBulkMsg').addEventListener('click', () => {
     }, i * 500);
   });
   overlayBulkMsg.classList.remove('open');
+});
+
+// --- Exportar contatos (vCard) ---
+document.getElementById('btnExportVcf').addEventListener('click', () => {
+  if (!leads.length){ showToast('Não há contatos pra exportar ainda.'); return; }
+
+  const vcardBlocks = leads.map(l => {
+    const digits = l.telefone.replace(/\D/g,'');
+    const phoneFmt = digits.length >= 10 ? '+55' + digits.replace(/^55/,'') : l.telefone;
+    const nota = `Origem: ${l.origem} | Produto: ${l.produto} | Etapa: ${STAGES.find(s=>s.id===l.stage)?.label || l.stage}`;
+    return [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${l.nome}`,
+      `TEL;TYPE=CELL:${phoneFmt}`,
+      `NOTE:${nota}`,
+      'END:VCARD'
+    ].join('\r\n');
+  });
+
+  const vcfContent = vcardBlocks.join('\r\n');
+  const blob = new Blob([vcfContent], { type: 'text/vcard;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'contatos-trilho.vcf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`Arquivo com ${leads.length} contato(s) baixado. Abra ele no celular pra importar no seu catálogo de contatos.`);
 });
 
 initLeads();
